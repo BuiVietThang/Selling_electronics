@@ -1,0 +1,168 @@
+{
+  "entities": {
+    "UserPrivateProfile": {
+      "title": "UserPrivateProfile",
+      "description": "Private user account profile containing contact and organization details.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the owner.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Full name of the user.",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email address of the user.",
+          "minLength": 3,
+          "maxLength": 120
+        },
+        "phone": {
+          "type": "string",
+          "description": "Contact phone number.",
+          "minLength": 0,
+          "maxLength": 30
+        },
+        "organization": {
+          "type": "string",
+          "description": "Company or organization name.",
+          "minLength": 0,
+          "maxLength": 120
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last update."
+        }
+      },
+      "required": ["uid", "displayName", "email", "phone", "organization", "updatedAt"]
+    },
+    "UserOrder": {
+      "title": "UserOrder",
+      "description": "E-commerce order record stored under a user's isolated orders subcollection.",
+      "type": "object",
+      "properties": {
+        "orderCode": {
+          "type": "string",
+          "description": "Unique order tracking code (e.g., ATH-849201).",
+          "minLength": 4,
+          "maxLength": 40,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "uid": {
+          "type": "string",
+          "description": "Owner UID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "customerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "customerPhone": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 30
+        },
+        "shippingAddress": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 250
+        },
+        "paymentMethod": {
+          "type": "string",
+          "enum": ["bank_transfer", "cod", "corporate_credit", "installment_0"]
+        },
+        "shippingMethod": {
+          "type": "string",
+          "enum": ["standard_24h", "express_2h", "engineer_onsite"]
+        },
+        "voucherCode": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 30
+        },
+        "needVatInvoice": {
+          "type": "boolean"
+        },
+        "vatCompanyInfo": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "itemsSummary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 800
+        },
+        "itemCount": {
+          "type": "number"
+        },
+        "subtotalAmount": {
+          "type": "number"
+        },
+        "discountAmount": {
+          "type": "number"
+        },
+        "shippingFee": {
+          "type": "number"
+        },
+        "totalAmount": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["confirmed", "calibrating", "shipping", "delivered"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "orderCode",
+        "uid",
+        "customerName",
+        "customerPhone",
+        "shippingAddress",
+        "paymentMethod",
+        "shippingMethod",
+        "voucherCode",
+        "needVatInvoice",
+        "vatCompanyInfo",
+        "itemsSummary",
+        "itemCount",
+        "subtotalAmount",
+        "discountAmount",
+        "shippingFee",
+        "totalAmount",
+        "status",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/private/{docId}": {
+      "schema": {
+        "$ref": "#/entities/UserPrivateProfile"
+      },
+      "description": "Isolated PII profile document (docId = 'profile') accessible strictly to the authenticated owner."
+    },
+    "/users/{userId}/orders/{orderId}": {
+      "schema": {
+        "$ref": "#/entities/UserOrder"
+      },
+      "description": "Isolated user e-commerce orders accessible strictly to the authenticated owner."
+    }
+  }
+}

@@ -1,0 +1,138 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidUserPrivateProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'displayName', 'email', 'phone', 'organization', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'displayName', 'email', 'phone', 'organization', 'updatedAt'])
+        && data.uid is string
+        && data.uid == userId
+        && data.uid == request.auth.uid
+        && isValidId(data.uid)
+        && data.displayName is string
+        && data.displayName.size() >= 1
+        && data.displayName.size() <= 100
+        && data.email is string
+        && data.email.size() >= 3
+        && data.email.size() <= 120
+        && data.phone is string
+        && data.phone.size() <= 30
+        && data.organization is string
+        && data.organization.size() <= 120
+        && data.updatedAt == request.time;
+    }
+
+    function isValidUserOrder(data, userId, orderId) {
+      return data.keys().hasAll([
+          'orderCode', 'uid', 'customerName', 'customerPhone', 'shippingAddress',
+          'paymentMethod', 'shippingMethod', 'voucherCode', 'needVatInvoice',
+          'vatCompanyInfo', 'itemsSummary', 'itemCount', 'subtotalAmount',
+          'discountAmount', 'shippingFee', 'totalAmount', 'status', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'orderCode', 'uid', 'customerName', 'customerPhone', 'shippingAddress',
+          'paymentMethod', 'shippingMethod', 'voucherCode', 'needVatInvoice',
+          'vatCompanyInfo', 'itemsSummary', 'itemCount', 'subtotalAmount',
+          'discountAmount', 'shippingFee', 'totalAmount', 'status', 'createdAt'
+        ])
+        && data.orderCode is string
+        && data.orderCode == orderId
+        && isValidId(data.orderCode)
+        && data.uid is string
+        && data.uid == userId
+        && data.uid == request.auth.uid
+        && isValidId(data.uid)
+        && data.customerName is string
+        && data.customerName.size() >= 1
+        && data.customerName.size() <= 100
+        && data.customerPhone is string
+        && data.customerPhone.size() >= 5
+        && data.customerPhone.size() <= 30
+        && data.shippingAddress is string
+        && data.shippingAddress.size() >= 3
+        && data.shippingAddress.size() <= 250
+        && data.paymentMethod in ['bank_transfer', 'cod', 'corporate_credit', 'installment_0']
+        && data.shippingMethod in ['standard_24h', 'express_2h', 'engineer_onsite']
+        && data.voucherCode is string
+        && data.voucherCode.size() <= 30
+        && data.needVatInvoice is bool
+        && data.vatCompanyInfo is string
+        && data.vatCompanyInfo.size() <= 200
+        && data.itemsSummary is string
+        && data.itemsSummary.size() >= 1
+        && data.itemsSummary.size() <= 800
+        && data.itemCount is number
+        && data.itemCount >= 1
+        && data.itemCount <= 1000
+        && data.subtotalAmount is number
+        && data.subtotalAmount >= 0
+        && data.discountAmount is number
+        && data.discountAmount >= 0
+        && data.shippingFee is number
+        && data.shippingFee >= 0
+        && data.totalAmount is number
+        && data.totalAmount >= 0
+        && data.status in ['confirmed', 'calibrating', 'shipping', 'delivered']
+        && data.createdAt == request.time;
+    }
+
+    // Isolated PII Profile Collection
+    match /users/{userId}/private/{docId} {
+      allow get: if isOwner(userId) && isValidId(userId) && docId == 'profile';
+      allow list: if false;
+
+      allow create: if isOwner(userId)
+        && isValidId(userId)
+        && docId == 'profile'
+        && isValidUserPrivateProfile(incoming(), userId);
+
+      allow update: if isOwner(userId)
+        && isValidId(userId)
+        && docId == 'profile'
+        && isValidUserPrivateProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'email', 'phone', 'organization', 'updatedAt']);
+
+      allow delete: if false;
+    }
+
+    // Isolated User E-Commerce Orders Subcollection
+    match /users/{userId}/orders/{orderId} {
+      allow get: if isOwner(userId) && isValidId(userId) && isValidId(orderId);
+      allow list: if isOwner(userId) && resource.data.uid == request.auth.uid;
+
+      allow create: if isOwner(userId)
+        && isValidId(userId)
+        && isValidId(orderId)
+        && isValidUserOrder(incoming(), userId, orderId);
+
+      allow update, delete: if false;
+    }
+  }
+}

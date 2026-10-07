@@ -1,0 +1,6 @@
+{
+  "name": "AETHER Precision Electronics",
+  "description": "Apple-inspired showcase and storefront for flagship computing workstations, architectural smart home appliances, and precision industrial automation components.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
